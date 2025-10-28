@@ -50,6 +50,23 @@ function GameDashboard({ userId, username, onLogout }) {
         setLoading(false);
     };
 
+    const resetGame = async () => {
+        if (!window.confirm('Are you sure you want to start a new game? This will delete your current progress.')) {
+            return;
+        }
+
+        setLoading(true);
+        setError('');
+        try {
+            await axios.delete(`http://localhost:8080/api/game/reset?userId=${userId}`);
+            setShowStartGame(true);
+            setGameState(null);
+        } catch (err) {
+            setError(err.response?.data?.error || 'Failed to reset game');
+        }
+        setLoading(false);
+    };
+
     const makeChoice = async (choiceId) => {
         setLoading(true);
         setError('');

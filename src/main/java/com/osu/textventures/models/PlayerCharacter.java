@@ -35,7 +35,7 @@ public class PlayerCharacter {
     }
 
     public PlayerCharacter(String id, String name, int level, int experience, List<Item> inventory, int baseDamage, int baseHealth) {
-        this(id, name, level, experience, inventory, baseDamage, baseHealth, "start_location", new java.util.ArrayList<>(), new HashMap<>());
+        this(id, name, level, experience, inventory, baseDamage, baseHealth, "bamboo_forest", new java.util.ArrayList<>(), new HashMap<>());
     }
 }
 

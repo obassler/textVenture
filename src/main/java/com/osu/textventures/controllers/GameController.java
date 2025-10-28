@@ -67,5 +67,14 @@ public class GameController {
             return ResponseEntity.internalServerError().body(Map.of("error", "Failed to process choice: " + e.getMessage()));
         }
     }
+    @DeleteMapping("/reset")
+    public ResponseEntity<?> resetGame(@RequestParam String userId) {
+        try {
+            gameService.resetGame(userId);
+            return ResponseEntity.ok(Map.of("message", "Game reset successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", "Failed to reset game: " + e.getMessage()));
+        }
+    }
 }
 

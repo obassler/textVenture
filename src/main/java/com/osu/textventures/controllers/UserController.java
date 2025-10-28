@@ -42,7 +42,8 @@ public class UserController {
             return ResponseEntity.ok(Map.of(
                     "message", "Login successful",
                     "username", user.getUsername(),
-                    "role", user.getRole()
+                    "role", user.getRole(),
+                    "id", user.getId()
             ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

@@ -68,6 +68,9 @@ public class GameService {
 
         return new GameState(newCharacter, startLocation.getDescription(), startLocation.getAvailableChoices());
     }
+    public void resetGame(String userId) throws ExecutionException, InterruptedException {
+        db.collection("playerCharacters").document(userId).delete().get();
+    }
 
     public GameState getGameState(String userId) throws ExecutionException, InterruptedException {
         PlayerCharacter player = getPlayerCharacter(userId);
