@@ -1,5 +1,6 @@
 package com.osu.textventures.controllers;
 
+import com.osu.textventures.services.CombatService;
 import com.osu.textventures.services.GameService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -67,6 +68,27 @@ public class GameController {
             return ResponseEntity.internalServerError().body(Map.of("error", "Failed to process choice: " + e.getMessage()));
         }
     }
+
+    @PostMapping("/combat")
+    public ResponseEntity<?> processCombatAction(@RequestBody Map<String, String> body) {
+        try {
+            String userId = body.get("userId");
+            String actionStr = body.get("action");
+
+            if (userId == null || actionStr == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "userId and action are required."));
+            }
+
+            CombatService.CombatAction action = CombatService.CombatAction.valueOf(actionStr.toUpperCase());
+            GameService.GameState gameState = gameService.processCombatAction(userId, action);
+            return ResponseEntity.ok(gameState);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", "Failed to process combat action: " + e.getMessage()));
+        }
+    }
+
     @DeleteMapping("/reset")
     public ResponseEntity<?> resetGame(@RequestParam String userId) {
         try {

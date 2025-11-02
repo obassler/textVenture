@@ -18,6 +18,13 @@ import java.util.concurrent.ExecutionException;
 public class GameService {
 
     private final Firestore db = FirestoreClient.getFirestore();
+    private final CombatService combatService;
+
+    private final Map<String, CombatService.CombatState> activeCombats = new HashMap<>();
+
+    public GameService(CombatService combatService) {
+        this.combatService = combatService;
+    }
 
     private <T> T getDocument(String collectionName, String documentId, Class<T> type) throws ExecutionException, InterruptedException {
         DocumentReference docRef = db.collection(collectionName).document(documentId);
@@ -107,6 +114,41 @@ public class GameService {
         return true;
     }
 
+    public GameState processCombatAction(String userId, CombatService.CombatAction action)
+            throws ExecutionException, InterruptedException {
+
+        PlayerCharacter player = getPlayerCharacter(userId);
+        if (player == null) {
+            throw new IllegalArgumentException("Player not found.");
+        }
+
+        CombatService.CombatState combatState = activeCombats.get(userId);
+        if (combatState == null) {
+            throw new IllegalArgumentException("No active combat for this user.");
+        }
+
+        CombatService.CombatResult result = combatService.processAction(combatState, action);
+        combatState = result.getCombatState();
+
+        if (!combatState.isCombatActive()) {
+            activeCombats.remove(userId);
+            if (result.isVictory()) {
+                player.setExperience(player.getExperience() + result.getExperienceGained());
+                saveDocument("playerCharacters", userId, player);
+            }
+        } else {
+            activeCombats.put(userId, combatState);
+        }
+
+        GameState gameState = new GameState();
+        gameState.setPlayerCharacter(player);
+        gameState.setCurrentNarrative(String.join("\n", result.getCombatLog()));
+        gameState.setAvailableChoices(List.of()); // no narrative choices during combat
+
+        return gameState;
+    }
+
+
     public GameState processChoice(String userId, String choiceId) throws ExecutionException, InterruptedException {
         PlayerCharacter player = getPlayerCharacter(userId);
         if (player == null) {
@@ -149,12 +191,23 @@ public class GameService {
             case "start_combat":
                 Enemy enemy = getEnemy(chosen.getTargetId());
                 if (enemy != null) {
-                    newDescription = "You encountered a " + enemy.getName() + "! Combat not fully implemented yet.";
+                    CombatService.CombatState combatState = combatService.startCombat(player, enemy);
+
+                    activeCombats.put(userId, combatState);
+
+                    newDescription = "You are now in combat with " + enemy.getName() + "!";
                     player.getGameHistory().add(newDescription);
+
+                    saveDocument("playerCharacters", userId, player);
+
+                    return new GameState(player, newDescription, new ArrayList<>()) {{
+                        setCombatState(combatState);
+                    }};
                 } else {
                     newDescription = "You prepared for combat, but no enemy appeared.";
                 }
                 break;
+
             case "set_flag":
                 if (chosen.getFlagToSet() != null) {
                     player.getFlags().putAll(chosen.getFlagToSet());
