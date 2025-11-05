@@ -2,11 +2,11 @@ package com.osu.textventures.controllers;
 
 import com.osu.textventures.services.CombatService;
 import com.osu.textventures.services.GameService;
+import com.osu.textventures.models.GameState;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 @RestController
 @RequestMapping("/api/game")
@@ -29,7 +29,7 @@ public class GameController {
                 return ResponseEntity.badRequest().body(Map.of("error", "userId and characterName are required."));
             }
 
-            GameService.GameState gameState = gameService.startGame(userId, characterName);
+            GameState gameState = gameService.startGame(userId, characterName);
             return ResponseEntity.ok(gameState);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -41,7 +41,7 @@ public class GameController {
     @GetMapping("/state")
     public ResponseEntity<?> getGameState(@RequestParam String userId) {
         try {
-            GameService.GameState gameState = gameService.getGameState(userId);
+            GameState gameState = gameService.getGameState(userId);
             return ResponseEntity.ok(gameState);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -60,7 +60,7 @@ public class GameController {
                 return ResponseEntity.badRequest().body(Map.of("error", "userId and choiceId are required."));
             }
 
-            GameService.GameState gameState = gameService.processChoice(userId, choiceId);
+            GameState gameState = gameService.processChoice(userId, choiceId);
             return ResponseEntity.ok(gameState);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
@@ -80,7 +80,7 @@ public class GameController {
             }
 
             CombatService.CombatAction action = CombatService.CombatAction.valueOf(actionStr.toUpperCase());
-            GameService.GameState gameState = gameService.processCombatAction(userId, action);
+            GameState gameState = gameService.processCombatAction(userId, action);
             return ResponseEntity.ok(gameState);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

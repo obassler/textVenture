@@ -9,7 +9,7 @@
 
 .dashboard-card {
     background-color: rgba(253, 245, 230, 0.95);
-    border: 3px solid var(--edo-border-gold);
+    border: 3px solid var(--edo-border-gold, #d4af37);
     border-radius: 15px;
     padding: 32px;
     width: 100%;
@@ -38,7 +38,7 @@
     align-items: center;
     margin-bottom: 32px;
     padding-bottom: 24px;
-    border-bottom: 2px solid var(--edo-wood-brown);
+    border-bottom: 2px solid var(--edo-wood-brown, #8b6f47);
     position: relative;
     z-index: 1;
 }
@@ -46,9 +46,9 @@
 .header-info h1 {
     margin: 0 0 4px 0;
     font-size: 2.5em;
-    color: var(--edo-dark-blue);
+    color: var(--edo-dark-blue, #1a3a52);
     font-family: 'Zen Antique', serif;
-    text-shadow: 1px 1px var(--edo-light-gold);
+    text-shadow: 1px 1px var(--edo-light-gold, #f4d03f);
 }
 
 .username-tag {
@@ -56,6 +56,26 @@
     font-size: 0.9em;
     color: #555;
     font-family: 'Noto Serif JP', serif;
+}
+
+.btn-logout {
+    background-color: var(--edo-red, #c41c3b);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1em;
+    font-family: 'Noto Serif JP', serif;
+    transition: all 0.2s ease;
+    position: relative;
+    z-index: 1;
+}
+
+.btn-logout:hover {
+    background-color: #a01730;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .stats-grid {
@@ -68,7 +88,7 @@
 }
 
 .stat-card {
-    background-color: var(--edo-wood-brown);
+    background-color: var(--edo-wood-brown, #8b6f47);
     padding: 20px;
     border-radius: 12px;
     display: flex;
@@ -77,7 +97,7 @@
     gap: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     transition: transform 0.2s ease;
-    border: 1px solid var(--edo-border-gold);
+    border: 1px solid var(--edo-border-gold, #d4af37);
 }
 
 .stat-card:hover {
@@ -86,14 +106,14 @@
 
 .stat-label {
     font-size: 0.9em;
-    color: var(--edo-paper-bg);
+    color: var(--edo-paper-bg, #fdf5e6);
     font-weight: 500;
     font-family: 'Noto Serif JP', serif;
 }
 
 .stat-value {
     font-size: 2em;
-    color: var(--edo-light-gold);
+    color: var(--edo-light-gold, #f4d03f);
     font-weight: bold;
     font-family: 'Zen Antique', serif;
 }
@@ -101,7 +121,9 @@
 .story-section,
 .choices-section,
 .history-section,
-.start-game-section {
+.start-game-section,
+.combat-status,
+.combat-log {
     margin-bottom: 32px;
     position: relative;
     z-index: 1;
@@ -112,7 +134,7 @@
 .history-section h2,
 .start-game-section h2 {
     font-size: 1.8em;
-    color: var(--edo-dark-blue);
+    color: var(--edo-dark-blue, #1a3a52);
     margin: 0 0 16px 0;
     font-family: 'Zen Antique', serif;
     text-shadow: 1px 1px rgba(0, 0, 0, 0.1);
@@ -128,7 +150,7 @@
     background-color: #fefefe;
     padding: 24px;
     border-radius: 12px;
-    border-left: 5px solid var(--edo-red);
+    border-left: 5px solid var(--edo-red, #c41c3b);
     box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.1);
 }
 
@@ -145,9 +167,9 @@
     gap: 12px;
 }
 
-.choice-button {
-    background-color: var(--edo-paper-bg);
-    border: 2px solid var(--edo-wood-brown);
+.choices-grid button {
+    background-color: var(--edo-paper-bg, #fdf5e6);
+    border: 2px solid var(--edo-wood-brown, #8b6f47);
     padding: 16px 20px;
     border-radius: 12px;
     display: flex;
@@ -157,92 +179,195 @@
     transition: all 0.2s ease;
     font-size: 1.1em;
     font-family: 'Noto Serif JP', serif;
-    color: var(--edo-dark-blue);
+    color: var(--edo-dark-blue, #1a3a52);
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-.choice-button:hover:not(:disabled) {
-    border-color: var(--edo-red);
+.choices-grid button:hover:not(:disabled) {
+    border-color: var(--edo-red, #c41c3b);
     background-color: #fff8f0;
     transform: translateX(4px);
 }
 
-.choice-button:disabled {
+.choices-grid button:disabled {
     cursor: not-allowed;
     opacity: 0.6;
 }
 
-.choice-text {
-    color: var(--edo-dark-blue);
-    font-weight: 500;
+/* Combat Status Styling */
+.combat-status {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
 }
 
-.choice-arrow {
-    color: var(--edo-red);
-    font-size: 1.2em;
-    transition: transform 0.2s ease;
-}
-
-.choice-button:hover:not(:disabled) .choice-arrow {
-    transform: translateX(4px);
-}
-
-.no-choices {
-    text-align: center;
-    color: #777;
-    font-style: italic;
+.combat-status .stat-card {
+    background-color: var(--edo-wood-brown, #8b6f47);
     padding: 20px;
-    font-family: 'Noto Serif JP', serif;
-}
-
-.history-list {
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--edo-border-gold, #d4af37);
+}
+
+/* Combat Log Styling */
+.combat-log {
+    background-color: #fefefe;
+    border: 2px solid var(--edo-wood-brown, #8b6f47);
+    border-radius: 12px;
+    padding: 16px;
     max-height: 300px;
     overflow-y: auto;
-    padding-right: 8px;
+    margin-bottom: 24px;
 }
 
-.history-item {
-    display: flex;
-    gap: 12px;
-    padding: 12px;
-    background-color: #fefefe;
-    border-radius: 8px;
-    align-items: flex-start;
-    border-left: 3px solid var(--edo-green);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-
-.history-number {
-    background-color: var(--edo-green);
-    color: white;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8em;
-    font-weight: bold;
-    flex-shrink: 0;
-    font-family: 'Noto Serif JP', serif;
-}
-
-.history-text {
-    color: #333;
+.combat-log p {
+    margin: 8px 0;
     font-size: 0.95em;
-    line-height: 1.5;
+    color: #333;
     font-family: 'Noto Serif JP', serif;
+    line-height: 1.4;
+    padding: 4px 0;
+    border-bottom: 1px solid #f0f0f0;
 }
 
+.combat-log p:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+/* Combat Actions Styling */
+.combat-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 1;
+}
+
+.combat-actions button {
+    padding: 14px 16px;
+    border: 2px solid var(--edo-wood-brown, #8b6f47);
+    border-radius: 8px;
+    font-size: 1em;
+    font-family: 'Noto Serif JP', serif;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    background-color: var(--edo-paper-bg, #fdf5e6);
+    color: var(--edo-dark-blue, #1a3a52);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.combat-actions button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border-color: var(--edo-red, #c41c3b);
+}
+
+.combat-actions button:active:not(:disabled) {
+    transform: translateY(0px);
+}
+
+.combat-actions button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Message Styling */
+.message {
+    padding: 16px;
+    border-radius: 8px;
+    margin-top: 16px;
+    font-family: 'Noto Serif JP', serif;
+    position: relative;
+    z-index: 1;
+}
+
+.message-error {
+    background-color: #ffebee;
+    color: var(--edo-red, #c41c3b);
+    border-left: 4px solid var(--edo-red, #c41c3b);
+}
+
+.message-success {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    border-left: 4px solid #2e7d32;
+}
+
+/* Scrollbar styling */
+.combat-log::-webkit-scrollbar {
+    width: 8px;
+}
+
+.combat-log::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 8px;
+}
+
+.combat-log::-webkit-scrollbar-thumb {
+    background: var(--edo-wood-brown, #8b6f47);
+    border-radius: 8px;
+}
+
+.combat-log::-webkit-scrollbar-thumb:hover {
+    background: #6b5437;
+}
+
+/* Start Game Form */
 .start-game-form {
     display: flex;
     flex-direction: column;
     gap: 20px;
 }
 
+.start-game-form input {
+    padding: 12px 16px;
+    border: 2px solid var(--edo-wood-brown, #8b6f47);
+    border-radius: 8px;
+    font-size: 1em;
+    font-family: 'Noto Serif JP', serif;
+    background-color: #fefefe;
+    color: #333;
+}
+
+.start-game-form input:focus {
+    outline: none;
+    border-color: var(--edo-red, #c41c3b);
+    box-shadow: 0 0 0 3px rgba(196, 28, 59, 0.1);
+}
+
+.start-game-form button {
+    padding: 14px 20px;
+    background-color: var(--edo-red, #c41c3b);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1em;
+    font-family: 'Noto Serif JP', serif;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.start-game-form button:hover:not(:disabled) {
+    background-color: #a01730;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.start-game-form button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Loading Spinner */
 .loading-spinner {
     display: flex;
     flex-direction: column;
@@ -255,17 +380,13 @@
 }
 
 .loading-spinner p {
-    color: var(--edo-dark-blue);
+    color: var(--edo-dark-blue, #1a3a52);
     font-size: 1.1em;
     font-weight: 500;
     font-family: 'Noto Serif JP', serif;
 }
 
-.dashboard-card .message {
-    position: relative;
-    z-index: 1;
-}
-
+/* Responsive Design */
 @media (max-width: 768px) {
     .dashboard-card {
         padding: 20px;
@@ -283,5 +404,37 @@
 
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    .combat-actions {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .combat-status {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-card {
+        padding: 16px;
+        margin-top: 10px;
+    }
+
+    .header-info h1 {
+        font-size: 1.5em;
+    }
+
+    .story-section h2,
+    .choices-section h2 {
+        font-size: 1.3em;
+    }
+
+    .combat-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .combat-log {
+        max-height: 200px;
     }
 }

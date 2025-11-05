@@ -105,14 +105,15 @@ function GameDashboard({ userId, username, onLogout }) {
                 action
             });
             setGameState(res.data);
-            detectCombat(res.data);
 
+            // Update combat log with the latest entries
             if (res.data?.combatState?.combatLog) {
                 setCombatLog(res.data.combatState.combatLog);
             }
 
-            if (!res.data?.combatState?.combatActive) {
-                setInCombat(false);
+            // Update combat status
+            if (res.data?.combatState) {
+                setInCombat(res.data.combatState.combatActive);
             }
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to process combat action');
@@ -177,9 +178,19 @@ function GameDashboard({ userId, username, onLogout }) {
                     </div>
 
                     <div className="combat-log">
-                        {(combatLog.length ? combatLog : cs.combatLog).map((line, i) => (
-                            <p key={i}>{line}</p>
-                        ))}
+                        {combatLog.length > 0 ? (
+                            combatLog.map((line, i) => (
+                                <p key={i}>{line}</p>
+                            ))
+                        ) : (
+                            cs.combatLog && cs.combatLog.length > 0 ? (
+                                cs.combatLog.map((line, i) => (
+                                    <p key={i}>{line}</p>
+                                ))
+                            ) : (
+                                <p>Combat has begun...</p>
+                            )
+                        )}
                     </div>
 
                     <div className="combat-actions">

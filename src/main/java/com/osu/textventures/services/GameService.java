@@ -4,8 +4,6 @@ import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
 import com.osu.textventures.models.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -13,6 +11,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import com.osu.textventures.models.GameState;
+
 
 @Service
 public class GameService {
@@ -37,8 +37,8 @@ public class GameService {
         }
     }
 
-    private <T> void saveDocument(String collectionName, String documentId, T data) throws ExecutionException, InterruptedException {
-        db.collection(collectionName).document(documentId).set(data).get();
+    private <T> void saveDocument(String documentId, T data) throws ExecutionException, InterruptedException {
+        db.collection("playerCharacters").document(documentId).set(data).get();
     }
 
     public PlayerCharacter getPlayerCharacter(String userId) throws ExecutionException, InterruptedException {
@@ -63,7 +63,7 @@ public class GameService {
                 userId, characterName, 1, 0, new ArrayList<>(), 10, 100
         );
 
-        saveDocument("playerCharacters", userId, newCharacter);
+        saveDocument(userId, newCharacter);
 
         Location startLocation = getLocation(newCharacter.getCurrentLocationId());
         if (startLocation == null) {
@@ -71,7 +71,7 @@ public class GameService {
         }
 
         newCharacter.getGameHistory().add(startLocation.getDescription());
-        saveDocument("playerCharacters", userId, newCharacter);
+        saveDocument(userId, newCharacter);
 
         return new GameState(newCharacter, startLocation.getDescription(), startLocation.getAvailableChoices());
     }
@@ -134,7 +134,7 @@ public class GameService {
             activeCombats.remove(userId);
             if (result.isVictory()) {
                 player.setExperience(player.getExperience() + result.getExperienceGained());
-                saveDocument("playerCharacters", userId, player);
+                saveDocument(userId, player);
             }
         } else {
             activeCombats.put(userId, combatState);
@@ -198,11 +198,11 @@ public class GameService {
                     newDescription = "You are now in combat with " + enemy.getName() + "!";
                     player.getGameHistory().add(newDescription);
 
-                    saveDocument("playerCharacters", userId, player);
+                    saveDocument(userId, player);
 
-                    return new GameState(player, newDescription, new ArrayList<>()) {{
-                        setCombatState(combatState);
-                    }};
+                    GameState gameState = new GameState(player, newDescription, new ArrayList<>());
+                    gameState.setCombatState(combatState);
+                    return gameState;
                 } else {
                     newDescription = "You prepared for combat, but no enemy appeared.";
                 }
@@ -224,7 +224,7 @@ public class GameService {
                 break;
         }
 
-        saveDocument("playerCharacters", userId, player);
+        saveDocument(userId, player);
 
         currentLocation = getLocation(player.getCurrentLocationId());
         if (currentLocation == null) {
@@ -241,18 +241,6 @@ public class GameService {
         return new GameState(player, newDescription, filteredChoices);
     }
 
-    @Data
-    @NoArgsConstructor
-    public static class GameState {
-        private PlayerCharacter playerCharacter;
-        private String currentNarrative;
-        private List<Choice> availableChoices;
 
-        public GameState(PlayerCharacter playerCharacter, String currentNarrative, List<Choice> availableChoices) {
-            this.playerCharacter = playerCharacter;
-            this.currentNarrative = currentNarrative;
-            this.availableChoices = availableChoices;
-        }
-    }
 }
 

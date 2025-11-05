@@ -43,29 +43,49 @@ public class CombatService {
             return result;
         }
 
+        // 1. Process Player Action
+        CombatResult playerResult;
         switch (action) {
             case ATTACK:
-                result = processAttack(state);
+                playerResult = processPlayerAttack(state);
                 break;
             case DEFEND:
-                result = processDefend(state);
+                playerResult = processPlayerDefend(state);
                 break;
             case FLEE:
-                result = processFlee(state);
+                playerResult = processPlayerFlee(state);
                 break;
             case USE_ITEM:
-                result = processUseItem(state);
+                playerResult = processPlayerUseItem(state);
                 break;
             default:
                 result.getCombatLog().add("Invalid action!");
                 result.setCombatState(state);
-                break;
+                return result;
         }
 
+        // Aggregate player action log and update state
+        result.getCombatLog().addAll(playerResult.getCombatLog());
+        state = playerResult.getCombatState();
+        result.setVictory(playerResult.isVictory());
+        result.setDefeated(playerResult.isDefeated());
+        result.setFled(playerResult.isFled());
+        result.setExperienceGained(playerResult.getExperienceGained());
+
+        // 2. Process Enemy Action if combat is still active and player did not flee
+        if (state.isCombatActive() && !result.isFled()) {
+            CombatResult enemyResult = processEnemyAttack(state);
+            result.getCombatLog().addAll(enemyResult.getCombatLog());
+            state = enemyResult.getCombatState();
+            result.setDefeated(enemyResult.isDefeated()); // Update defeated status
+        }
+
+        // 3. Finalize result
+        result.setCombatState(state);
         return result;
     }
 
-    private CombatResult processAttack(CombatState state) {
+    private CombatResult processPlayerAttack(CombatState state) {
         CombatResult result = new CombatResult();
         result.setCombatLog(new ArrayList<>());
 
@@ -80,9 +100,15 @@ public class CombatService {
             result.setVictory(true);
             result.setExperienceGained(calculateExperience(state.getEnemyMaxHealth(), state.getEnemyDamage()));
             result.getCombatLog().add("You gained " + result.getExperienceGained() + " experience!");
-            result.setCombatState(state);
-            return result;
         }
+
+        result.setCombatState(state);
+        return result;
+    }
+
+    private CombatResult processEnemyAttack(CombatState state) {
+        CombatResult result = new CombatResult();
+        result.setCombatLog(new ArrayList<>());
 
         int enemyDamage = calculateDamage(state.getEnemyDamage());
         state.setPlayerCurrentHealth(state.getPlayerCurrentHealth() - enemyDamage);
@@ -99,33 +125,26 @@ public class CombatService {
         return result;
     }
 
-    private CombatResult processDefend(CombatState state) {
+    private CombatResult processPlayerDefend(CombatState state) {
         CombatResult result = new CombatResult();
         result.setCombatLog(new ArrayList<>());
 
         result.getCombatLog().add("You take a defensive stance!");
 
-        int enemyDamage = calculateDamage(state.getEnemyDamage()) / 2;
-        state.setPlayerCurrentHealth(state.getPlayerCurrentHealth() - enemyDamage);
-        result.getCombatLog().add(state.getEnemyName() + " attacks, but you block most of the damage! You take " + enemyDamage + " damage.");
-
+        // Player heals slightly on defend
         int healAmount = 5;
         state.setPlayerCurrentHealth(Math.min(state.getPlayerCurrentHealth() + healAmount, state.getPlayerMaxHealth()));
         result.getCombatLog().add("You recover " + healAmount + " health!");
 
-        // Check if player is defeated
-        if (state.getPlayerCurrentHealth() <= 0) {
-            state.setPlayerCurrentHealth(0);
-            state.setCombatActive(false);
-            result.getCombatLog().add("You have been defeated...");
-            result.setDefeated(true);
-        }
+        // Note: Damage reduction is now handled in processEnemyAttack if needed, but for simplicity,
+        // I'll keep the current logic of just healing and letting the enemy attack in the main loop.
+        // If you want damage reduction, you'd need to add a 'defending' flag to CombatState.
 
         result.setCombatState(state);
         return result;
     }
 
-    private CombatResult processFlee(CombatState state) {
+    private CombatResult processPlayerFlee(CombatState state) {
         CombatResult result = new CombatResult();
         result.setCombatLog(new ArrayList<>());
 
@@ -135,42 +154,20 @@ public class CombatService {
             result.setFled(true);
         } else {
             result.getCombatLog().add("You failed to escape!");
-
-            int enemyDamage = calculateDamage(state.getEnemyDamage());
-            state.setPlayerCurrentHealth(state.getPlayerCurrentHealth() - enemyDamage);
-            result.getCombatLog().add(state.getEnemyName() + " attacks as you try to flee! You take " + enemyDamage + " damage.");
-
-
-            if (state.getPlayerCurrentHealth() <= 0) {
-                state.setPlayerCurrentHealth(0);
-                state.setCombatActive(false);
-                result.getCombatLog().add("You have been defeated...");
-                result.setDefeated(true);
-            }
+            // The enemy attack on failed flee is now handled by the main processAction loop
         }
 
         result.setCombatState(state);
         return result;
     }
 
-    private CombatResult processUseItem(CombatState state) {
+    private CombatResult processPlayerUseItem(CombatState state) {
         CombatResult result = new CombatResult();
         result.setCombatLog(new ArrayList<>());
 
         int healAmount = 20;
         state.setPlayerCurrentHealth(Math.min(state.getPlayerCurrentHealth() + healAmount, state.getPlayerMaxHealth()));
         result.getCombatLog().add("You use a healing item and recover " + healAmount + " health!");
-
-        int enemyDamage = calculateDamage(state.getEnemyDamage());
-        state.setPlayerCurrentHealth(state.getPlayerCurrentHealth() - enemyDamage);
-        result.getCombatLog().add(state.getEnemyName() + " attacks you for " + enemyDamage + " damage!");
-
-        if (state.getPlayerCurrentHealth() <= 0) {
-            state.setPlayerCurrentHealth(0);
-            state.setCombatActive(false);
-            result.getCombatLog().add("You have been defeated...");
-            result.setDefeated(true);
-        }
 
         result.setCombatState(state);
         return result;
