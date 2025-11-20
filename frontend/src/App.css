@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;700&family=Zen+Antique&display=swap');
+
+.App {
+    min-height: 100vh;
+    width: 100%;
+}
+
+.App-header {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+:root {
+    --edo-dark-blue: #1a237e;        /* Deep indigo blue - traditional Japanese color */
+    --edo-red: #c0392b;              /* Deep red - traditional vermillion */
+    --edo-green: #27ae60;            /* Jade green */
+    --edo-paper-bg: #fdf5e6;         /* Old linen/parchment color */
+    --edo-wood-brown: #5d4037;       /* Dark wood brown */
+    --edo-border-gold: #d4af37;      /* Antique gold */
+    --edo-light-gold: #f4e4c1;       /* Light gold/cream */
+}
+
+body {
+    font-family: 'Noto Serif JP', serif;
+    background: linear-gradient(135deg, #8b7355 0%, #5d4037 100%);
+    margin: 0;
+    padding: 0;
+}
+
+.btn-primary {
+    background-color: var(--edo-red);
+    color: white;
+    border: 2px solid var(--edo-wood-brown);
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-primary:hover {
+    background-color: #a93226;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.btn-primary:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+    opacity: 0.6;
+    transform: none;
+}
+
+.btn-secondary {
+    background-color: transparent;
+    color: var(--edo-dark-blue);
+    border: 2px solid var(--edo-dark-blue);
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background-color: var(--edo-dark-blue);
+    color: white;
+}

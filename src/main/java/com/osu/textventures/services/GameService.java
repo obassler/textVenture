@@ -26,6 +26,37 @@ public class GameService {
         this.combatService = combatService;
     }
 
+    private int getExperienceForLevel(int level) {
+        int totalXp = 0;
+        for (int i = 2; i <= level; i++) {
+            totalXp += (i - 1) * 10;
+        }
+        return totalXp;
+    }
+
+    private void checkAndProcessLevelUp(PlayerCharacter player) {
+        while (true) {
+            int nextLevel = player.getLevel() + 1;
+            int xpRequired = getExperienceForLevel(nextLevel);
+
+            if (player.getExperience() >= xpRequired) {
+                player.setLevel(nextLevel);
+
+                int healthIncrease = 20;
+                int damageIncrease = 3;
+
+                player.setBaseHealth(player.getBaseHealth() + healthIncrease);
+                player.setCurrentHealth(player.getCurrentHealth() + healthIncrease); // Heal on level up
+                player.setBaseDamage(player.getBaseDamage() + damageIncrease);
+
+                player.getGameHistory().add("Level up! You are now level " + nextLevel +
+                    ". Health +" + healthIncrease + ", Damage +" + damageIncrease);
+            } else {
+                break;
+            }
+        }
+    }
+
     private <T> T getDocument(String collectionName, String documentId, Class<T> type) throws ExecutionException, InterruptedException {
         DocumentReference docRef = db.collection(collectionName).document(documentId);
         ApiFuture<DocumentSnapshot> future = docRef.get();
@@ -42,7 +73,14 @@ public class GameService {
     }
 
     public PlayerCharacter getPlayerCharacter(String userId) throws ExecutionException, InterruptedException {
-        return getDocument("playerCharacters", userId, PlayerCharacter.class);
+        PlayerCharacter player = getDocument("playerCharacters", userId, PlayerCharacter.class);
+
+        if (player != null && player.getCurrentHealth() == 0) {
+            player.setCurrentHealth(player.getBaseHealth());
+            saveDocument(userId, player);
+        }
+
+        return player;
     }
 
     public Location getLocation(String locationId) throws ExecutionException, InterruptedException {
@@ -97,7 +135,13 @@ public class GameService {
             }
         }
 
-        return new GameState(player, currentLocation.getDescription(), filteredChoices);
+        GameState gameState = new GameState(player, currentLocation.getDescription(), filteredChoices);
+
+        if (player.getFlags().getOrDefault("defeated_ancient_dragon", false)) {
+            gameState.setGameCompleted(true);
+        }
+
+        return gameState;
     }
 
     private boolean isChoiceAvailable(Choice choice, Map<String, Boolean> playerFlags) {
@@ -105,12 +149,27 @@ public class GameService {
             return true;
         }
 
-        String flagName = (String) choice.getCondition().get("flag");
-        Boolean requiredValue = (Boolean) choice.getCondition().get("value");
-
-        if (flagName != null && requiredValue != null) {
-            return playerFlags.getOrDefault(flagName, false).equals(requiredValue);
+        if (choice.getCondition().containsKey("flag") && choice.getCondition().containsKey("value")) {
+            String flagName = (String) choice.getCondition().get("flag");
+            Boolean requiredValue = (Boolean) choice.getCondition().get("value");
+            if (flagName != null && requiredValue != null) {
+                return playerFlags.getOrDefault(flagName, false).equals(requiredValue);
+            }
         }
+
+        for (Map.Entry<String, Object> entry : choice.getCondition().entrySet()) {
+            String flagName = entry.getKey();
+            Object value = entry.getValue();
+
+            if (value instanceof Boolean) {
+                Boolean requiredValue = (Boolean) value;
+                Boolean playerValue = playerFlags.getOrDefault(flagName, false);
+                if (!playerValue.equals(requiredValue)) {
+                    return false;
+                }
+            }
+        }
+
         return true;
     }
 
@@ -127,23 +186,89 @@ public class GameService {
             throw new IllegalArgumentException("No active combat for this user.");
         }
 
+        if (action == CombatService.CombatAction.USE_ITEM) {
+            Item healingItem = player.getInventory().stream()
+                    .filter(item -> "healing".equalsIgnoreCase(item.getType()) || "food".equalsIgnoreCase(item.getType()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (healingItem == null) {
+                StringBuilder itemsMessage = new StringBuilder("You have no healing items to use! ");
+                if (player.getInventory().isEmpty()) {
+                    itemsMessage.append("Your inventory is empty.");
+                } else {
+                    itemsMessage.append("You have: ");
+                    for (Item item : player.getInventory()) {
+                        itemsMessage.append(item.getName()).append(" (").append(item.getType()).append("), ");
+                    }
+                    itemsMessage.setLength(itemsMessage.length() - 2);
+                    itemsMessage.append(". Weapons and armor are automatically equipped!");
+                }
+
+                combatState.getCombatLog().add(itemsMessage.toString());
+
+                GameState gameState = new GameState();
+                gameState.setPlayerCharacter(player);
+                gameState.setCombatState(combatState);
+                gameState.setCurrentNarrative(itemsMessage.toString());
+                gameState.setAvailableChoices(List.of());
+                return gameState;
+            }
+
+            int healAmount = healingItem.getPower();
+            int oldHealth = combatState.getPlayerCurrentHealth();
+            int newHealth = Math.min(oldHealth + healAmount, combatState.getPlayerMaxHealth());
+            combatState.setPlayerCurrentHealth(newHealth);
+            combatState.getCombatLog().add("You use " + healingItem.getName() + " and recover " + (newHealth - oldHealth) + " health!");
+
+            player.getInventory().remove(healingItem);
+            player.setCurrentHealth(newHealth);
+            saveDocument(userId, player);
+        }
+
         CombatService.CombatResult result = combatService.processAction(combatState, action);
         combatState = result.getCombatState();
+
+        player.setCurrentHealth(combatState.getPlayerCurrentHealth());
 
         if (!combatState.isCombatActive()) {
             activeCombats.remove(userId);
             if (result.isVictory()) {
+                int oldLevel = player.getLevel();
                 player.setExperience(player.getExperience() + result.getExperienceGained());
+                checkAndProcessLevelUp(player);
+
+                String defeatFlag = "defeated_" + combatState.getEnemyId();
+                player.getFlags().put(defeatFlag, true);
+
+                if ("grumpy_fisherman".equals(combatState.getEnemyId())) {
+                    player.getFlags().put("fisherman_distracted", true);
+                }
+
                 saveDocument(userId, player);
+
+                if (oldLevel < player.getLevel()) {
+                    result.getCombatLog().add("Level up! You are now level " + player.getLevel() + "!");
+                }
+
+                return getGameState(userId);
+            } else if (result.isDefeated()) {
+                saveDocument(userId, player);
+                return getGameState(userId);
+            } else if (result.isFled()) {
+                saveDocument(userId, player);
+                return getGameState(userId);
             }
         } else {
             activeCombats.put(userId, combatState);
+            saveDocument(userId, player);
         }
 
         GameState gameState = new GameState();
         gameState.setPlayerCharacter(player);
+        gameState.setCombatState(combatState);
         gameState.setCurrentNarrative(String.join("\n", result.getCombatLog()));
-        gameState.setAvailableChoices(List.of()); // no narrative choices during combat
+        gameState.setAvailableChoices(List.of());
 
         return gameState;
     }
@@ -174,6 +299,11 @@ public class GameService {
                 if (newLocation != null) {
                     newDescription = newLocation.getDescription();
                     player.getGameHistory().add(newDescription);
+
+                    // Set flags if specified
+                    if (chosen.getFlagToSet() != null) {
+                        player.getFlags().putAll(chosen.getFlagToSet());
+                    }
                 } else {
                     newDescription = "You moved to an unknown place.";
                 }
@@ -182,8 +312,12 @@ public class GameService {
                 Item foundItem = getDocument("items", chosen.getTargetId(), Item.class);
                 if (foundItem != null) {
                     player.getInventory().add(foundItem);
-                    newDescription = "You found a " + foundItem.getName() + ".";
+                    newDescription = "You found a " + foundItem.getName() + "!";
                     player.getGameHistory().add(newDescription);
+
+                    if (chosen.getFlagToSet() != null) {
+                        player.getFlags().putAll(chosen.getFlagToSet());
+                    }
                 } else {
                     newDescription = "You tried to find an item, but found nothing.";
                 }
@@ -218,6 +352,10 @@ public class GameService {
             case "display_text":
                 newDescription = chosen.getTargetId();
                 player.getGameHistory().add(newDescription);
+
+                if (chosen.getFlagToSet() != null) {
+                    player.getFlags().putAll(chosen.getFlagToSet());
+                }
                 break;
             default:
                 newDescription = "Nothing happened.";

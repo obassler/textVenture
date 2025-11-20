@@ -16,11 +16,13 @@ public class GameState {
     private PlayerCharacter playerCharacter;
     private String currentNarrative;
     private List<Choice> availableChoices;
-    private CombatService.CombatState combatState; // optional
+    private CombatService.CombatState combatState;
+    private boolean gameCompleted;
 
     public GameState(PlayerCharacter playerCharacter, String currentNarrative, List<Choice> availableChoices) {
         this.playerCharacter = playerCharacter;
         this.currentNarrative = currentNarrative;
         this.availableChoices = availableChoices;
+        this.gameCompleted = false;
     }
 }

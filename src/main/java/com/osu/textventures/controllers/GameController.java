@@ -4,6 +4,8 @@ import com.osu.textventures.services.CombatService;
 import com.osu.textventures.services.GameService;
 import com.osu.textventures.models.GameState;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -19,14 +21,22 @@ public class GameController {
         this.gameService = gameService;
     }
 
+    private String getAuthenticatedUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getPrincipal() instanceof String) {
+            return (String) authentication.getPrincipal();
+        }
+        throw new IllegalStateException("User not authenticated");
+    }
+
     @PostMapping("/start")
     public ResponseEntity<?> startGame(@RequestBody Map<String, String> body) {
         try {
-            String userId = body.get("userId");
+            String userId = getAuthenticatedUserId();
             String characterName = body.get("characterName");
 
-            if (userId == null || characterName == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "userId and characterName are required."));
+            if (characterName == null || characterName.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "characterName is required."));
             }
 
             GameState gameState = gameService.startGame(userId, characterName);
@@ -39,8 +49,9 @@ public class GameController {
     }
 
     @GetMapping("/state")
-    public ResponseEntity<?> getGameState(@RequestParam String userId) {
+    public ResponseEntity<?> getGameState() {
         try {
+            String userId = getAuthenticatedUserId();
             GameState gameState = gameService.getGameState(userId);
             return ResponseEntity.ok(gameState);
         } catch (IllegalArgumentException e) {
@@ -53,11 +64,11 @@ public class GameController {
     @PostMapping("/choice")
     public ResponseEntity<?> processChoice(@RequestBody Map<String, String> body) {
         try {
-            String userId = body.get("userId");
+            String userId = getAuthenticatedUserId();
             String choiceId = body.get("choiceId");
 
-            if (userId == null || choiceId == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "userId and choiceId are required."));
+            if (choiceId == null || choiceId.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "choiceId is required."));
             }
 
             GameState gameState = gameService.processChoice(userId, choiceId);
@@ -72,11 +83,11 @@ public class GameController {
     @PostMapping("/combat")
     public ResponseEntity<?> processCombatAction(@RequestBody Map<String, String> body) {
         try {
-            String userId = body.get("userId");
+            String userId = getAuthenticatedUserId();
             String actionStr = body.get("action");
 
-            if (userId == null || actionStr == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "userId and action are required."));
+            if (actionStr == null || actionStr.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "action is required."));
             }
 
             CombatService.CombatAction action = CombatService.CombatAction.valueOf(actionStr.toUpperCase());
@@ -90,8 +101,9 @@ public class GameController {
     }
 
     @DeleteMapping("/reset")
-    public ResponseEntity<?> resetGame(@RequestParam String userId) {
+    public ResponseEntity<?> resetGame() {
         try {
+            String userId = getAuthenticatedUserId();
             gameService.resetGame(userId);
             return ResponseEntity.ok(Map.of("message", "Game reset successfully"));
         } catch (Exception e) {

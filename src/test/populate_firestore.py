@@ -81,6 +81,7 @@ def add_data_to_firestore():
                 }
             ],
             "itemsPresent": [],
+
             "enemyPresentId": "gruff_person"
         }
     ]

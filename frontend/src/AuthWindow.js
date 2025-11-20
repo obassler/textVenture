@@ -22,16 +22,20 @@ function AuthWindow({ onLoginSuccess }) {
             const res = await axios.post(endpoint, payload);
 
             if (isLogin) {
+                localStorage.setItem('token', res.data.token);
+                localStorage.setItem('userId', res.data.id);
+                localStorage.setItem('username', res.data.username);
                 setMessage(`Login successful! Welcome, ${res.data.username}!`);
                 setTimeout(() => {
                     onLoginSuccess({
                         userId: res.data.id,
                         username: res.data.username,
-                        role: res.data.role
+                        role: res.data.role,
+                        token: res.data.token
                     });
                 }, 500);
             } else {
-                setMessage(`Registration successful! User ID: ${res.data.id}`);
+                setMessage(`Registration successful! You can now log in.`);
                 setTimeout(() => {
                     setIsLogin(true);
                     setMessage('');
