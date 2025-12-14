@@ -4,6 +4,8 @@ import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.cloud.FirestoreClient;
 import com.osu.textventures.models.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -16,6 +18,8 @@ import com.osu.textventures.models.GameState;
 
 @Service
 public class GameService {
+
+    private static final Logger logger = LoggerFactory.getLogger(GameService.class);
 
     private final Firestore db = FirestoreClient.getFirestore();
     private final CombatService combatService;
@@ -92,8 +96,11 @@ public class GameService {
     }
 
     public GameState startGame(String userId, String characterName) throws ExecutionException, InterruptedException {
+        logger.info("Starting new game for user: {} with character name: {}", userId, characterName);
+
         PlayerCharacter existingCharacter = getPlayerCharacter(userId);
         if (existingCharacter != null) {
+            logger.warn("User {} already has an existing character", userId);
             throw new IllegalArgumentException("Player character already exists for this user.");
         }
 
@@ -102,29 +109,38 @@ public class GameService {
         );
 
         saveDocument(userId, newCharacter);
+        logger.debug("Created new character for user: {}", userId);
 
         Location startLocation = getLocation(newCharacter.getCurrentLocationId());
         if (startLocation == null) {
+            logger.error("Starting location not found for user: {}", userId);
             throw new IllegalStateException("Starting location not found.");
         }
 
         newCharacter.getGameHistory().add(startLocation.getDescription());
         saveDocument(userId, newCharacter);
 
+        logger.info("Game started successfully for user: {}", userId);
         return new GameState(newCharacter, startLocation.getDescription(), startLocation.getAvailableChoices());
     }
     public void resetGame(String userId) throws ExecutionException, InterruptedException {
+        logger.info("Resetting game for user: {}", userId);
         db.collection("playerCharacters").document(userId).delete().get();
+        logger.info("Game reset completed for user: {}", userId);
     }
 
     public GameState getGameState(String userId) throws ExecutionException, InterruptedException {
+        logger.debug("Fetching game state for user: {}", userId);
+
         PlayerCharacter player = getPlayerCharacter(userId);
         if (player == null) {
+            logger.warn("No player character found for user: {}", userId);
             throw new IllegalArgumentException("Player character not found. Please start a new game.");
         }
 
         Location currentLocation = getLocation(player.getCurrentLocationId());
         if (currentLocation == null) {
+            logger.error("Location {} not found for user: {}", player.getCurrentLocationId(), userId);
             throw new IllegalStateException("Current location not found for player.");
         }
 
@@ -139,8 +155,10 @@ public class GameService {
 
         if (player.getFlags().getOrDefault("defeated_ancient_dragon", false)) {
             gameState.setGameCompleted(true);
+            logger.info("Game completed for user: {}", userId);
         }
 
+        logger.debug("Game state fetched successfully for user: {}", userId);
         return gameState;
     }
 
@@ -161,8 +179,7 @@ public class GameService {
             String flagName = entry.getKey();
             Object value = entry.getValue();
 
-            if (value instanceof Boolean) {
-                Boolean requiredValue = (Boolean) value;
+            if (value instanceof Boolean requiredValue) {
                 Boolean playerValue = playerFlags.getOrDefault(flagName, false);
                 if (!playerValue.equals(requiredValue)) {
                     return false;
@@ -176,15 +193,21 @@ public class GameService {
     public GameState processCombatAction(String userId, CombatService.CombatAction action)
             throws ExecutionException, InterruptedException {
 
+        logger.info("Processing combat action {} for user: {}", action, userId);
+
         PlayerCharacter player = getPlayerCharacter(userId);
         if (player == null) {
+            logger.warn("Player not found for combat action, user: {}", userId);
             throw new IllegalArgumentException("Player not found.");
         }
 
         CombatService.CombatState combatState = activeCombats.get(userId);
         if (combatState == null) {
+            logger.warn("No active combat found for user: {}", userId);
             throw new IllegalArgumentException("No active combat for this user.");
         }
+
+        logger.debug("Combat state: player HP={}, enemy HP={}", combatState.getPlayerCurrentHealth(), combatState.getEnemyCurrentHealth());
 
         if (action == CombatService.CombatAction.USE_ITEM) {
             Item healingItem = player.getInventory().stream()
@@ -275,20 +298,29 @@ public class GameService {
 
 
     public GameState processChoice(String userId, String choiceId) throws ExecutionException, InterruptedException {
+        logger.info("Processing choice {} for user: {}", choiceId, userId);
+
         PlayerCharacter player = getPlayerCharacter(userId);
         if (player == null) {
+            logger.warn("Player not found for user: {}", userId);
             throw new IllegalArgumentException("Player character not found.");
         }
 
         Location currentLocation = getLocation(player.getCurrentLocationId());
         if (currentLocation == null) {
+            logger.error("Current location not found for user: {}", userId);
             throw new IllegalStateException("Current location not found.");
         }
 
         Choice chosen = currentLocation.getAvailableChoices().stream()
                 .filter(c -> c.getId().equals(choiceId) && isChoiceAvailable(c, player.getFlags()))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Invalid or unavailable choice."));
+                .orElseThrow(() -> {
+                    logger.warn("Invalid choice {} for user: {}", choiceId, userId);
+                    return new IllegalArgumentException("Invalid or unavailable choice.");
+                });
+
+        logger.debug("User {} selected choice with effect type: {}", userId, chosen.getEffectType());
 
         String newDescription = "";
 

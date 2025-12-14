@@ -5,6 +5,8 @@ import com.osu.textventures.models.Item;
 import com.osu.textventures.models.PlayerCharacter;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -14,9 +16,13 @@ import java.util.Random;
 @Service
 public class CombatService {
 
+    private static final Logger logger = LoggerFactory.getLogger(CombatService.class);
+
     private final Random random = new Random();
 
     public CombatState startCombat(PlayerCharacter player, Enemy enemy) {
+        logger.info("Starting combat: {} vs {}", player.getName(), enemy.getName());
+
         CombatState state = new CombatState();
 
         int weaponBonus = player.getInventory().stream()
@@ -28,6 +34,8 @@ public class CombatService {
                 .filter(item -> "armor".equalsIgnoreCase(item.getType()))
                 .mapToInt(Item::getPower)
                 .sum();
+
+        logger.debug("Combat bonuses - weapon: +{}, armor: +{}", weaponBonus, armorBonus);
 
         state.setPlayerCurrentHealth(player.getCurrentHealth());
         state.setPlayerMaxHealth(player.getBaseHealth() + armorBonus);
@@ -54,10 +62,13 @@ public class CombatService {
     }
 
     public CombatResult processAction(CombatState state, CombatAction action) {
+        logger.debug("Processing combat action: {}", action);
+
         CombatResult result = new CombatResult();
         result.setCombatLog(new ArrayList<>());
 
         if (!state.isCombatActive()) {
+            logger.warn("Attempted action on inactive combat");
             result.getCombatLog().add("Combat is not active!");
             result.setCombatState(state);
             return result;
@@ -122,6 +133,7 @@ public class CombatService {
             result.setVictory(true);
             result.setExperienceGained(calculateExperience(state.getEnemyMaxHealth(), state.getEnemyDamage()));
             result.getCombatLog().add("You gained " + result.getExperienceGained() + " experience!");
+            logger.info("Enemy {} defeated, XP gained: {}", state.getEnemyName(), result.getExperienceGained());
         }
 
         result.setCombatState(state);
@@ -148,6 +160,7 @@ public class CombatService {
             state.setCombatActive(false);
             result.getCombatLog().add("You have been defeated...");
             result.setDefeated(true);
+            logger.info("Player defeated by {}", state.getEnemyName());
         }
 
         result.setCombatState(state);
@@ -182,8 +195,10 @@ public class CombatService {
             state.setCombatActive(false);
             result.getCombatLog().add("You successfully fled from combat!");
             result.setFled(true);
+            logger.info("Player fled from combat with {}", state.getEnemyName());
         } else {
             result.getCombatLog().add("You failed to escape!");
+            logger.debug("Player failed to flee from {}", state.getEnemyName());
         }
 
         result.setCombatState(state);
